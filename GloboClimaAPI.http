@@ -1,4 +1,4 @@
-@GloboClimaAPI_HostAddress = http://localhost:5112
+@GloboClimaAPI_HostAddress = http://localhost:5000
 
 GET {{GloboClimaAPI_HostAddress}}/weatherforecast/
 Accept: application/json
