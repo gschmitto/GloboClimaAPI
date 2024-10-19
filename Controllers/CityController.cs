@@ -4,6 +4,7 @@ using GloboClimaAPI.Models;
 using GloboClimaAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using GloboClimaAPI.Helpers;
+using System.Security.Claims;
 
 
 namespace GloboClimaAPI.Controllers
@@ -60,14 +61,28 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> AddCityToFavorites([FromBody] FavoriteCityModel city)
         {
-            var userId = User.Identity.Name;
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+
+            if (!isAuthenticated)
+            {
+                return Unauthorized("Usuário não autenticado.");
+            }
+
+            // Tente obter o ID do usuário das claims
+            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Se userId ainda for nulo, retorne um erro
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized("Email do usuário não encontrado no token.");
+            }
 
             if (city == null)
             {
                 return BadRequest("Dados da cidade não fornecidos.");
             }
 
-            bool success = await _favoritesService.AddCityToFavorites(userId, city);
+            bool success = await _favoritesService.AddCityToFavorites(email, city);
             if (!success)
             {
                 return BadRequest("Erro ao adicionar cidade aos favoritos.");
@@ -75,7 +90,6 @@ namespace GloboClimaAPI.Controllers
 
             return Ok("Cidade adicionada aos favoritos.");
         }
-
 
         /// <summary>
         /// Obtém a lista de cidades favoritas do usuário.
@@ -85,9 +99,23 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> GetFavoriteCities()
         {
-            var userId = User.Identity.Name;
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
 
-            var favoriteCities = await _favoritesService.GetFavoriteCities(userId);
+            if (!isAuthenticated)
+            {
+                return Unauthorized("Usuário não autenticado.");
+            }
+
+            // Tente obter o ID do usuário das claims
+            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Se userId ainda for nulo, retorne um erro
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized("Email do usuário não encontrado no token.");
+            }
+
+            var favoriteCities = await _favoritesService.GetFavoriteCities(email);
             if (favoriteCities == null || favoriteCities.Count == 0)
             {
                 return NotFound("Você não tem cidades favoritas.");
@@ -105,9 +133,23 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteCityFromFavorites(string cityName)
         {
-            var userId = User.Identity.Name;
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
 
-            bool success = await _favoritesService.RemoveCityFromFavorites(userId, cityName);
+            if (!isAuthenticated)
+            {
+                return Unauthorized("Usuário não autenticado.");
+            }
+
+            // Tente obter o ID do usuário das claims
+            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Se userId ainda for nulo, retorne um erro
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized("Email do usuário não encontrado no token.");
+            }
+
+            bool success = await _favoritesService.RemoveCityFromFavorites(email, cityName);
             if (!success)
             {
                 return NotFound($"Cidade com ID {cityName} não encontrada nos favoritos.");

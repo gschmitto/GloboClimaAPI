@@ -1,5 +1,6 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 using GloboClimaAPI.Models;
 
 namespace GloboClimaAPI.Data
@@ -47,6 +48,35 @@ namespace GloboClimaAPI.Data
         public async Task DeleteUserFavoritesAsync(string userId)
         {
             await _context.DeleteAsync<UserFavorites>(userId);
+        }
+
+        /// <summary>
+        /// Recupera os favoritos de um usuário com base no email.
+        /// </summary>
+        /// <param name="email">Email do usuário para buscar os favoritos.</param>
+        /// <returns>Objeto contendo os favoritos do usuário ou null se não existir.</returns>
+        public async Task<UserFavorites?> GetUserFavoritesByEmailAsync(string email)
+        {
+            var scanConditions = new List<ScanCondition>
+            {
+                new ScanCondition(nameof(UserFavorites.Email), ScanOperator.Equal, email)
+            };
+
+            var search = _context.ScanAsync<UserFavorites>(scanConditions);
+            var results = await search.GetRemainingAsync();
+
+            return results.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Verifica se um registro de favoritos de um usuário existe com base no email.
+        /// </summary>
+        /// <param name="email">Email do usuário para verificar.</param>
+        /// <returns>True se o registro existir, false caso contrário.</returns>
+        public async Task<bool> UserFavoritesExistsAsync(string email)
+        {
+            var userFavorites = await GetUserFavoritesByEmailAsync(email);
+            return userFavorites != null;
         }
     }
 }

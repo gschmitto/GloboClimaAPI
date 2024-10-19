@@ -51,14 +51,12 @@ namespace GloboClimaAPI.Infrastructure.Data
             });
 
             // Criar a tabela de favoritos
-            await CreateTableIfNotExistsAsync("Favorites", new List<KeySchemaElement>
+            await CreateTableIfNotExistsAsync("UserFavorites", new List<KeySchemaElement>
             {
-                new KeySchemaElement("UserId", KeyType.HASH),
-                new KeySchemaElement("LocationId", KeyType.RANGE)
+                new KeySchemaElement("Email", KeyType.HASH)
             }, new List<AttributeDefinition>
             {
-                new AttributeDefinition("UserId", ScalarAttributeType.S),
-                new AttributeDefinition("LocationId", ScalarAttributeType.S)
+                new AttributeDefinition("Email", ScalarAttributeType.S)
             });
         }
 
