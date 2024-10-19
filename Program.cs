@@ -1,15 +1,45 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using GloboClimaAPI.Services;
+using GloboClimaAPI.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
+using GloboClimaAPI.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Adiciona os serviços necessários para o controlador
 builder.Services.AddControllers();
 
+// Registrar o DynamoDBClient
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+builder.Services.AddAWSService<IAmazonDynamoDB>();
+
+// Registrar o DynamoDBContext
+builder.Services.AddScoped<DynamoDBContext>();
+
 builder.Services.AddScoped<IFavoritesService, FavoritesService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+// Adicionar o DynamoDBInitializer para inicializar tabelas
+builder.Services.AddSingleton<DynamoDBInitializer>();
+
+// Configuração para usar autenticação JWT
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is not configured.")))
+        };
+    });
 
 builder.Services.AddHttpClient();
 
@@ -25,6 +55,8 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddSingleton<UserFavoritesRepository>();
+
 var app = builder.Build();
 
 // Ativa o middleware para Swagger e Swagger UI
@@ -37,6 +69,14 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
         c.RoutePrefix = string.Empty; // Define a página inicial como o Swagger UI
     });
 }
+
+// Ativar autenticação e autorização
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Inicializar as tabelas DynamoDB
+var dynamoDBInitializer = app.Services.GetRequiredService<DynamoDBInitializer>();
+await dynamoDBInitializer.InitializeTablesAsync();
 
 // Configura o pipeline de requisições
 app.MapControllers(); // Mapeia os controladores da API

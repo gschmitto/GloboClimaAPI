@@ -1,6 +1,5 @@
 using Swashbuckle.AspNetCore.Annotations;
 using Newtonsoft.Json;
-using System.Collections.Generic;
 
 namespace GloboClimaAPI.Models
 {
@@ -14,28 +13,28 @@ namespace GloboClimaAPI.Models
         /// </summary>
         [JsonProperty("coord")]
         [SwaggerSchema("Coordenadas geográficas (longitude e latitude).")]
-        public Coord Coord { get; set; }
+        public required Coord Coord { get; set; }
 
         /// <summary>
         /// Lista de condições climáticas.
         /// </summary>
         [JsonProperty("weather")]
         [SwaggerSchema("Lista de condições climáticas.")]
-        public List<Weather> Weather { get; set; }
+        public List<Weather>? Weather { get; set; }
 
         /// <summary>
         /// A origem ou fonte dos dados.
         /// </summary>
         [JsonProperty("base")]
         [SwaggerSchema("A origem ou fonte dos dados.")]
-        public string Base { get; set; }
+        public string? Base { get; set; }
 
         /// <summary>
         /// Dados principais
         /// </summary>
         [JsonProperty("main")]
         [SwaggerSchema("Dados principais")]
-        public Main Main { get; set; }
+        public required Main Main { get; set; }
 
         /// <summary>
         /// Visibilidade em metros.
@@ -49,14 +48,14 @@ namespace GloboClimaAPI.Models
         /// </summary>
         [JsonProperty("wind")]
         [SwaggerSchema("Dados do vento.")]
-        public Wind Wind { get; set; }
+        public Wind? Wind { get; set; }
 
         /// <summary>
         /// Dados das nuvens.
         /// </summary>
         [JsonProperty("clouds")]
         [SwaggerSchema("Dados das nuvens.")]
-        public Clouds Clouds { get; set; }
+        public Clouds? Clouds { get; set; }
 
         /// <summary>
         /// Data e hora da consulta ao clima, no formato Unix timestamp.
@@ -70,7 +69,7 @@ namespace GloboClimaAPI.Models
         /// </summary>
         [JsonProperty("sys")]
         [SwaggerSchema("Informações sobre o sistema.")]
-        public Sys Sys { get; set; }
+        public Sys? Sys { get; set; }
 
         /// <summary>
         /// Fuso horário da cidade em relação ao UTC, expresso em segundos.
@@ -91,7 +90,7 @@ namespace GloboClimaAPI.Models
         /// </summary>
         [JsonProperty("name")]
         [SwaggerSchema("Nome da cidade.")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Código de status da resposta.
@@ -134,19 +133,19 @@ namespace GloboClimaAPI.Models
         /// Categoria principal da condição climática (ex: "Clouds").
         /// </summary>
         [JsonProperty("main")]
-        public string Main { get; set; }
+        public string? Main { get; set; }
 
         /// <summary>
         /// Descrição detalhada da condição climática (ex: "overcast clouds").
         /// </summary>
         [JsonProperty("description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         /// <summary>
         /// Ícone associado à condição climática.
         /// </summary>
         [JsonProperty("icon")]
-        public string Icon { get; set; }
+        public string? Icon { get; set; }
     }
 
     /// <summary>
@@ -272,7 +271,7 @@ namespace GloboClimaAPI.Models
         /// País da cidade.
         /// </summary>
         [JsonProperty("country")]
-        public string Country { get; set; }
+        public string? Country { get; set; }
 
         /// <summary>
         /// Horário de nascer do sol em timestamp Unix.

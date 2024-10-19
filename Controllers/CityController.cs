@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using GloboClimaAPI.Models;
 using GloboClimaAPI.Services;
