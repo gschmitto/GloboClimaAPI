@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using GloboClimaAPI.Models;
 using GloboClimaAPI.DTOs;
 

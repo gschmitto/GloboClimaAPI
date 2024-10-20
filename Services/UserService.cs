@@ -3,8 +3,6 @@ using GloboClimaAPI.Models;
 using GloboClimaAPI.Data;
 using System.Security.Cryptography;
 using System.Text;
-using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 
 namespace GloboClimaAPI.Services
 {
@@ -13,18 +11,15 @@ namespace GloboClimaAPI.Services
     /// </summary>
     public class UserService : IUserService
     {
-        private readonly DynamoDBContext _dynamoDbContext;
-        private readonly UserFavoritesRepository _userFavoritesRepository;
+        private readonly IUserRepository _userRepository;
 
         /// <summary>
-        /// Inicializa uma nova instância de <see cref="UserService"/> com o contexto do DynamoDB e o repositório de favoritos do usuário.
+        /// Inicializa uma nova instância de <see cref="UserService"/> com o repositório de usuários e o repositório de favoritos do usuário.
         /// </summary>
-        /// <param name="dynamoDbContext">O contexto do DynamoDB para acesso aos dados do usuário.</param>
-        /// <param name="userFavoritesRepository">O repositório para gerenciamento dos favoritos do usuário.</param>
-        public UserService(DynamoDBContext dynamoDbContext, UserFavoritesRepository userFavoritesRepository)
+        /// <param name="userRepository">O repositório para gerenciamento dos usuários.</param></param>
+        public UserService(IUserRepository userRepository)
         {
-            _dynamoDbContext = dynamoDbContext;
-            _userFavoritesRepository = userFavoritesRepository;
+            _userRepository = userRepository;
         }
 
         /// <summary>
@@ -34,7 +29,7 @@ namespace GloboClimaAPI.Services
         /// <returns>Um valor booleano indicando se o usuário existe ou não.</returns>
         public async Task<bool> UserExistsAsync(string email)
         {
-            var user = await _dynamoDbContext.LoadAsync<User>(email);
+            var user = await _userRepository.GetUserByEmailAsync(email);
             return user != null;
         }
 
@@ -55,7 +50,7 @@ namespace GloboClimaAPI.Services
                 PasswordSalt = hmac.Key
             };
 
-            await _dynamoDbContext.SaveAsync(user);
+            await _userRepository.AddUserAsync(user);
 
             return user;
         }
@@ -68,14 +63,7 @@ namespace GloboClimaAPI.Services
         /// <returns>O objeto do usuário autenticado, se bem-sucedido; caso contrário, null.</returns>
         public async Task<User?> AuthenticateUserAsync(string email, string password)
         {
-            var search = _dynamoDbContext.ScanAsync<User>(new List<ScanCondition>
-            {
-                new ScanCondition("Email", ScanOperator.Equal, email)
-            });
-
-            var users = await search.GetNextSetAsync();
-
-            var user = users.FirstOrDefault();
+            var user = await _userRepository.GetUserByEmailAsync(email);
             if (user == null) return null;
 
             using var hmac = new HMACSHA512(user.PasswordSalt);
@@ -87,34 +75,6 @@ namespace GloboClimaAPI.Services
             }
 
             return user;
-        }
-
-        /// <summary>
-        /// Recupera os favoritos de um usuário.
-        /// </summary>
-        /// <param name="userId">ID do usuário.</param>
-        /// <returns>Os favoritos do usuário.</returns>
-        public async Task<UserFavorites> GetUserFavoritesAsync(string userId)
-        {
-            return await _userFavoritesRepository.GetUserFavoritesAsync(userId);
-        }
-
-        /// <summary>
-        /// Adiciona ou atualiza os favoritos de um usuário.
-        /// </summary>
-        /// <param name="userFavorites">Objeto contendo os favoritos do usuário.</param>
-        public async Task SaveUserFavoritesAsync(UserFavorites userFavorites)
-        {
-            await _userFavoritesRepository.SaveUserFavoritesAsync(userFavorites);
-        }
-
-        /// <summary>
-        /// Deleta os favoritos de um usuário.
-        /// </summary>
-        /// <param name="userId">ID do usuário para excluir os favoritos.</param>
-        public async Task DeleteUserFavoritesAsync(string userId)
-        {
-            await _userFavoritesRepository.DeleteUserFavoritesAsync(userId);
         }
     }
 }

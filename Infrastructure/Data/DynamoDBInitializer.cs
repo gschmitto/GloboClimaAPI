@@ -28,10 +28,9 @@ namespace GloboClimaAPI.Infrastructure.Data
             // Criar a tabela de usuários
             await CreateTableIfNotExistsAsync("Users", new List<KeySchemaElement>
             {
-                new KeySchemaElement("Id", KeyType.HASH)
+                new KeySchemaElement("Email", KeyType.HASH)
             }, new List<AttributeDefinition>
             {
-                new AttributeDefinition("Id", ScalarAttributeType.S),
                 new AttributeDefinition("Email", ScalarAttributeType.S)
             }, new List<GlobalSecondaryIndex>
             {

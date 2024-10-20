@@ -12,14 +12,14 @@ namespace GloboClimaAPI.Models
         /// Identificador único do usuário.
         /// </summary>
         /// <example>1</example>
-        [DynamoDBHashKey]
+        [DynamoDBProperty]
         public required string Id { get; set; }
 
         /// <summary>
         /// Email do usuário, utilizado para autenticação.
         /// </summary>
         /// <example>usuario@dominio.com</example>
-        [DynamoDBProperty]
+        [DynamoDBHashKey]
         public required string Email { get; set; }
 
         /// <summary>

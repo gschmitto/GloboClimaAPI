@@ -1,11 +1,11 @@
-using GloboClimaAPI.Services;
-using GloboClimaAPI.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using GloboClimaAPI.Data;
 using GloboClimaAPI.Infrastructure.Data;
+using GloboClimaAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +19,11 @@ builder.Services.AddAWSService<IAmazonDynamoDB>();
 // Registrar o DynamoDBContext
 builder.Services.AddScoped<DynamoDBContext>();
 
+// Registrando repositórios e serviços
 builder.Services.AddScoped<IFavoritesService, FavoritesService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserFavoritesRepository, UserFavoritesRepository>();
 
 // Adicionar o DynamoDBInitializer para inicializar tabelas
 builder.Services.AddSingleton<DynamoDBInitializer>();
@@ -54,7 +57,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Uma API para clima e informações de cidades"
     });
 
-    // Configuração de segurança para o Swagger
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
@@ -79,9 +81,21 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddSingleton<UserFavoritesRepository>();
-
 var app = builder.Build();
+
+// Middleware de tratamento de exceções
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next.Invoke();
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+});
 
 // Ativa o middleware para Swagger e Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())

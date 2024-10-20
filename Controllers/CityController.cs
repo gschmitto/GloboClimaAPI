@@ -3,9 +3,7 @@ using Newtonsoft.Json;
 using GloboClimaAPI.Models;
 using GloboClimaAPI.Services;
 using Microsoft.AspNetCore.Authorization;
-using GloboClimaAPI.Helpers;
 using System.Security.Claims;
-
 
 namespace GloboClimaAPI.Controllers
 {
@@ -155,7 +153,7 @@ namespace GloboClimaAPI.Controllers
                 return NotFound($"Cidade com ID {cityName} não encontrada nos favoritos.");
             }
 
-            return Ok(ApiMessages.CityRemovedFromFavorites);
+            return Ok("Cidade favorita removida com sucesso.");
         }
     }
 }

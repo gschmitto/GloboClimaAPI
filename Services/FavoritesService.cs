@@ -8,12 +8,12 @@ namespace GloboClimaAPI.Services
     /// </summary>
     public class FavoritesService : IFavoritesService
     {
-        private readonly UserFavoritesRepository _repository;
+        private readonly IUserFavoritesRepository _repository;
 
         /// <summary>
         /// Construtor com injeção do repositório.
         /// </summary>
-        public FavoritesService(UserFavoritesRepository repository)
+        public FavoritesService(IUserFavoritesRepository repository)
         {
             _repository = repository;
         }
