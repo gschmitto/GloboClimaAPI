@@ -83,20 +83,6 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Middleware de tratamento de exceções
-app.Use(async (context, next) =>
-{
-    try
-    {
-        await next.Invoke();
-    }
-    catch (Exception ex)
-    {
-        context.Response.StatusCode = 500;
-        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
-    }
-});
-
 // Ativa o middleware para Swagger e Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {

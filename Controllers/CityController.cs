@@ -38,16 +38,27 @@ namespace GloboClimaAPI.Controllers
         [HttpGet("weather/{cityName}")]
         public async Task<ActionResult<WeatherResponse>> GetWeather(string cityName)
         {
-            var client = _httpClientFactory.CreateClient();
-            var response = await client.GetStringAsync(string.Format(OpenWeatherMapUrl, cityName));
+            if (string.IsNullOrWhiteSpace(cityName))
+            {
+                return BadRequest("O nome da cidade não pode ser vazio.");
+            }
 
-            if (string.IsNullOrEmpty(response))
+            var client = _httpClientFactory.CreateClient();
+
+            try
+            {
+                var response = await client.GetStringAsync(string.Format(OpenWeatherMapUrl, cityName));
+                var weatherData = JsonConvert.DeserializeObject<WeatherResponse>(response);
+                return Ok(weatherData);
+            }
+            catch (HttpRequestException)
             {
                 return NotFound($"Cidade {cityName} não encontrada.");
             }
-
-            var weatherData = JsonConvert.DeserializeObject<WeatherResponse>(response);
-            return Ok(weatherData);
+            catch (JsonException)
+            {
+                return BadRequest("Erro ao processar os dados de clima.");
+            }
         }
 
         /// <summary>
@@ -59,28 +70,20 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> AddCityToFavorites([FromBody] FavoriteCityModel city)
         {
-            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-
-            if (!isAuthenticated)
-            {
-                return Unauthorized("Usuário não autenticado.");
-            }
-
-            // Tente obter o ID do usuário das claims
-            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // Se userId ainda for nulo, retorne um erro
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized("Email do usuário não encontrado no token.");
-            }
-
             if (city == null)
             {
                 return BadRequest("Dados da cidade não fornecidos.");
             }
 
-            bool success = await _favoritesService.AddCityToFavorites(email, city);
+            var email = GetUserEmail();
+            if (email == null)
+            {
+                return Unauthorized("Email do usuário não encontrado no token.");
+            }
+
+            var result = await _favoritesService.AddCityToFavorites(email, city);
+            bool success = result.Success;
+
             if (!success)
             {
                 return BadRequest("Erro ao adicionar cidade aos favoritos.");
@@ -97,18 +100,8 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> GetFavoriteCities()
         {
-            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-
-            if (!isAuthenticated)
-            {
-                return Unauthorized("Usuário não autenticado.");
-            }
-
-            // Tente obter o ID do usuário das claims
-            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // Se userId ainda for nulo, retorne um erro
-            if (string.IsNullOrEmpty(email))
+            var email = GetUserEmail();
+            if (email == null)
             {
                 return Unauthorized("Email do usuário não encontrado no token.");
             }
@@ -131,29 +124,30 @@ namespace GloboClimaAPI.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteCityFromFavorites(string cityName)
         {
-            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
-
-            if (!isAuthenticated)
-            {
-                return Unauthorized("Usuário não autenticado.");
-            }
-
-            // Tente obter o ID do usuário das claims
-            var email = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // Se userId ainda for nulo, retorne um erro
-            if (string.IsNullOrEmpty(email))
+            var email = GetUserEmail();
+            if (email == null)
             {
                 return Unauthorized("Email do usuário não encontrado no token.");
             }
 
-            bool success = await _favoritesService.RemoveCityFromFavorites(email, cityName);
+            var result = await _favoritesService.RemoveCityFromFavorites(email, cityName);
+            bool success = result.Success;
+            
             if (!success)
             {
-                return NotFound($"Cidade com ID {cityName} não encontrada nos favoritos.");
+                return NotFound($"Cidade {cityName} não encontrada nos favoritos.");
             }
 
             return Ok("Cidade favorita removida com sucesso.");
+        }
+
+        /// <summary>
+        /// Obtém o email do usuário a partir das claims.
+        /// </summary>
+        /// <returns>Email do usuário ou null se não encontrado.</returns>
+        private string? GetUserEmail()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
     }
 }

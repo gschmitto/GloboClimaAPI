@@ -18,16 +18,19 @@ namespace GloboClimaAPI.Controllers
     {
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
         /// <summary>
         /// Construtor do AuthController que injeta dependências necessárias.
         /// </summary>
         /// <param name="userService">Serviço de usuário para autenticação e registro.</param>
         /// <param name="configuration">Configuração do aplicativo para acessar JWT e outros valores de configuração.</param>
-        public AuthController(IUserService userService, IConfiguration configuration)
+        /// <param name="logger">Logger para registrar eventos e erros.</param>
+        public AuthController(IUserService userService, IConfiguration configuration, ILogger<AuthController> logger)
         {
             _userService = userService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         /// <summary>
@@ -35,27 +38,23 @@ namespace GloboClimaAPI.Controllers
         /// </summary>
         /// <param name="userRegisterDto">DTO com informações para registro de usuário.</param>
         /// <returns>Retorna uma mensagem de sucesso ou erro.</returns>
-        /// <response code="200">Sucesso: Usuário registrado com sucesso.</response>
-        /// <response code="400">Erro: Dados inválidos ou usuário já existe.</response>
-        /// <response code="500">Erro: Falha ao registrar o usuário.</response>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegisterDto userRegisterDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest("Dados inválidos.");
+                return BadRequest(ModelState);
             }
 
-            var userExists = await _userService.UserExistsAsync(userRegisterDto.Email);
-            if (userExists)
+            if (await _userService.UserExistsAsync(userRegisterDto.Email))
             {
                 return BadRequest("Usuário já existe.");
             }
 
             var user = await _userService.RegisterUserAsync(userRegisterDto);
-
             if (user == null)
             {
+                _logger.LogError("Erro ao registrar o usuário: {Email}", userRegisterDto.Email);
                 return StatusCode(500, "Erro ao registrar o usuário. Tente novamente.");
             }
 
@@ -67,25 +66,24 @@ namespace GloboClimaAPI.Controllers
         /// </summary>
         /// <param name="userLoginDto">DTO com email e senha do usuário.</param>
         /// <returns>Retorna o token JWT se o login for bem-sucedido.</returns>
-        /// <response code="200">Sucesso: Token JWT retornado.</response>
-        /// <response code="400">Erro: Dados inválidos.</response>
-        /// <response code="401">Erro: Credenciais inválidas.</response>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest("Dados inválidos.");
+                return BadRequest(ModelState);
             }
 
-            var user = await _userService.AuthenticateUserAsync(userLoginDto.Email, userLoginDto.Password);
-            if (user == null)
+            var result = await _userService.AuthenticateUserAsync(userLoginDto.Email, userLoginDto.Password);
+            if (result.Data == null)
             {
+                _logger.LogWarning("Tentativa de login falhou para o usuário: {Email}", userLoginDto.Email);
                 return Unauthorized("Credenciais inválidas.");
             }
 
-            var token = GenerateJwtToken(user);
-            return Ok(new { token });
+            var token = GenerateJwtToken((User)result.Data);
+            var response = new LoginResponseDto { Token = token };
+            return Ok(response);
         }
 
         /// <summary>
@@ -102,11 +100,9 @@ namespace GloboClimaAPI.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
-            var jwtKey = _configuration["Jwt:Key"] 
-             ?? throw new ArgumentNullException("Jwt:Key", "Chave de segurança JWT não configurada.");
+            var jwtKey = GetJwtKey();
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
@@ -118,6 +114,15 @@ namespace GloboClimaAPI.Controllers
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        /// <summary>
+        /// Obtém a chave JWT a partir da configuração.
+        /// </summary>
+        /// <returns>A chave JWT.</returns>
+        private string GetJwtKey()
+        {
+            return _configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key", "Chave de segurança JWT não configurada.");
         }
     }
 }

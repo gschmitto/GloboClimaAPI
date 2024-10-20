@@ -45,7 +45,7 @@ namespace GloboClimaAPI.Infrastructure.Data
                     {
                         ProjectionType = ProjectionType.ALL
                     },
-                    ProvisionedThroughput = new ProvisionedThroughput(5, 5) // Definindo throughput
+                    ProvisionedThroughput = new ProvisionedThroughput(5, 5)
                 }
             });
 

@@ -20,7 +20,7 @@ namespace GloboClimaAPI.Services
         /// </summary>
         /// <param name="userRegisterDto">Os dados de registro do usuário.</param>
         /// <returns>O objeto do usuário registrado.</returns>
-        Task<User> RegisterUserAsync(UserRegisterDto userRegisterDto);
+        Task<OperationResult> RegisterUserAsync(UserRegisterDto userRegisterDto);
 
         /// <summary>
         /// Autentica um usuário com o email e senha fornecidos.
@@ -28,6 +28,6 @@ namespace GloboClimaAPI.Services
         /// <param name="email">O email do usuário.</param>
         /// <param name="password">A senha do usuário.</param>
         /// <returns>O objeto do usuário autenticado, se bem-sucedido; caso contrário, null.</returns>
-        Task<User?> AuthenticateUserAsync(string email, string password);
+        Task<OperationResult> AuthenticateUserAsync(string email, string password);
     }
 }

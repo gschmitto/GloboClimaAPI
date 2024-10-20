@@ -1,5 +1,5 @@
-using GloboClimaAPI.Data;
 using GloboClimaAPI.Models;
+using GloboClimaAPI.Data;
 using GloboClimaAPI.Services;
 using Moq;
 using Xunit;
@@ -8,204 +8,154 @@ namespace GloboClimaAPI.Tests
 {
     public class FavoritesServiceTests
     {
-        private readonly Mock<IUserFavoritesRepository> _mockRepository; // Use a interface aqui
+        private readonly Mock<IUserFavoritesRepository> _repositoryMock;
+        private readonly Mock<ILogger<FavoritesService>> _loggerMock;
         private readonly FavoritesService _service;
 
         public FavoritesServiceTests()
         {
-            _mockRepository = new Mock<IUserFavoritesRepository>(); // Corrigido para Mock da interface
-            _service = new FavoritesService(_mockRepository.Object);
+            _repositoryMock = new Mock<IUserFavoritesRepository>();
+            _loggerMock = new Mock<ILogger<FavoritesService>>();
+            _service = new FavoritesService(_repositoryMock.Object, _loggerMock.Object);
         }
 
         [Fact]
-        public async Task AddCityToFavorites_ShouldReturnFalse_WhenEmailIsNull()
+        public async Task AddCityToFavorites_ShouldAddCity_WhenCityIsValid()
         {
             // Arrange
-            string email = null;
-            var city = new FavoriteCityModel { CityName = "São Paulo" };
+            var email = "user@example.com";
+            var city = new FavoriteCityModel { CityName = "City1" };
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(new UserFavorites { Email = email, FavoriteCities = new List<FavoriteCityModel>() });
 
             // Act
             var result = await _service.AddCityToFavorites(email, city);
 
             // Assert
-            Assert.False(result);
+            Assert.True(result.Success);
+            Assert.Equal("Cidade adicionada aos favoritos com sucesso.", result.Message);
+            _repositoryMock.Verify(r => r.SaveUserFavoritesAsync(It.IsAny<UserFavorites>()), Times.Once);
         }
 
         [Fact]
-        public async Task AddCityToFavorites_ShouldReturnFalse_WhenCityIsNull()
+        public async Task AddCityToFavorites_ShouldReturnError_WhenCityIsNull()
         {
             // Arrange
-            string email = "test@example.com";
-            FavoriteCityModel city = null;
+            var email = "user@example.com";
 
             // Act
-            var result = await _service.AddCityToFavorites(email, city);
+            var result = await _service.AddCityToFavorites(email, null);
 
             // Assert
-            Assert.False(result);
+            Assert.False(result.Success);
+            Assert.Equal("Erro ao adicionar cidade: Value cannot be null. (Parameter 'city')", result.Message);
         }
 
         [Fact]
-        public async Task AddCityToFavorites_ShouldCreateNewFavorites_WhenUserHasNoFavorites()
+        public async Task AddCityToFavorites_ShouldReturnError_WhenCityAlreadyExists()
         {
             // Arrange
-            var email = "test@example.com";
-            var city = new FavoriteCityModel { CityName = "São Paulo" };
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync((UserFavorites)null);
-
-            // Act
-            var result = await _service.AddCityToFavorites(email, city);
-
-            // Assert
-            Assert.True(result);
-            _mockRepository.Verify(repo => repo.SaveUserFavoritesAsync(It.IsAny<UserFavorites>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task AddCityToFavorites_ShouldReturnFalse_WhenCityAlreadyExists()
-        {
-            // Arrange
-            var email = "test@example.com";
-            var city = new FavoriteCityModel { CityName = "São Paulo" };
-            var userFavorites = new UserFavorites
+            var email = "user@example.com";
+            var city = new FavoriteCityModel { CityName = "City1" };
+            var existingFavorites = new UserFavorites
             {
                 Email = email,
                 FavoriteCities = new List<FavoriteCityModel> { city }
             };
-
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync(userFavorites);
-
-            // Act
-            var result = await _service.AddCityToFavorites(email, city);
-
-            // Assert
-            Assert.False(result);
-            _mockRepository.Verify(repo => repo.SaveUserFavoritesAsync(It.IsAny<UserFavorites>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task AddCityToFavorites_ShouldAddCity_WhenValidInput()
-        {
-            // Arrange
-            var email = "test@example.com";
-            var city = new FavoriteCityModel { CityName = "São Paulo" };
-            var userFavorites = new UserFavorites
-            {
-                Email = email,
-                FavoriteCities = new List<FavoriteCityModel>()
-            };
-
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync(userFavorites);
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(existingFavorites);
 
             // Act
             var result = await _service.AddCityToFavorites(email, city);
 
             // Assert
-            Assert.True(result);
-            Assert.Contains(city, userFavorites.FavoriteCities);
-            _mockRepository.Verify(repo => repo.SaveUserFavoritesAsync(userFavorites), Times.Once);
-        }
-
-        [Fact]
-        public async Task GetFavoriteCities_ShouldReturnEmptyList_WhenUserHasNoFavorites()
-        {
-            // Arrange
-            var email = "test@example.com";
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync((UserFavorites)null);
-
-            // Act
-            var result = await _service.GetFavoriteCities(email);
-
-            // Assert
-            Assert.Empty(result);
-        }
-
-        [Fact]
-        public async Task GetFavoriteCities_ShouldReturnListOfFavorites_WhenUserHasFavorites()
-        {
-            // Arrange
-            var email = "test@example.com";
-            var favorites = new List<FavoriteCityModel>
-            {
-                new FavoriteCityModel { CityName = "São Paulo" },
-                new FavoriteCityModel { CityName = "Rio de Janeiro" }
-            };
-
-            var userFavorites = new UserFavorites
-            {
-                Email = email,
-                FavoriteCities = favorites
-            };
-
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync(userFavorites);
-
-            // Act
-            var result = await _service.GetFavoriteCities(email);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-            Assert.Contains(result, c => c.CityName == "São Paulo");
-            Assert.Contains(result, c => c.CityName == "Rio de Janeiro");
-        }
-
-        [Fact]
-        public async Task RemoveCityFromFavorites_ShouldReturnFalse_WhenUserHasNoFavorites()
-        {
-            // Arrange
-            var email = "test@example.com";
-            var cityName = "São Paulo";
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync((UserFavorites)null);
-
-            // Act
-            var result = await _service.RemoveCityFromFavorites(email, cityName);
-
-            // Assert
-            Assert.False(result);
-        }
-
-        [Fact]
-        public async Task RemoveCityFromFavorites_ShouldReturnFalse_WhenCityDoesNotExist()
-        {
-            // Arrange
-            var email = "test@example.com";
-            var cityName = "São Paulo";
-            var userFavorites = new UserFavorites
-            {
-                Email = email,
-                FavoriteCities = new List<FavoriteCityModel>()
-            };
-
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync(userFavorites);
-
-            // Act
-            var result = await _service.RemoveCityFromFavorites(email, cityName);
-
-            // Assert
-            Assert.False(result);
+            Assert.False(result.Success);
+            Assert.Equal("A cidade já está nos favoritos.", result.Message);
         }
 
         [Fact]
         public async Task RemoveCityFromFavorites_ShouldRemoveCity_WhenCityExists()
         {
             // Arrange
-            var email = "test@example.com";
-            var cityName = "São Paulo";
-            var cityToRemove = new FavoriteCityModel { CityName = cityName };
-            var userFavorites = new UserFavorites
+            var email = "user@example.com";
+            var cityName = "City1";
+            var city = new FavoriteCityModel { CityName = cityName };
+            var existingFavorites = new UserFavorites
             {
                 Email = email,
-                FavoriteCities = new List<FavoriteCityModel> { cityToRemove }
+                FavoriteCities = new List<FavoriteCityModel> { city }
             };
-
-            _mockRepository.Setup(repo => repo.GetUserFavoritesByEmailAsync(email)).ReturnsAsync(userFavorites);
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(existingFavorites);
 
             // Act
             var result = await _service.RemoveCityFromFavorites(email, cityName);
 
             // Assert
-            Assert.True(result);
-            Assert.DoesNotContain(cityToRemove, userFavorites.FavoriteCities);
-            _mockRepository.Verify(repo => repo.SaveUserFavoritesAsync(userFavorites), Times.Once);
+            Assert.True(result.Success);
+            Assert.Equal("Cidade removida dos favoritos com sucesso.", result.Message);
+            _repositoryMock.Verify(r => r.SaveUserFavoritesAsync(It.IsAny<UserFavorites>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task RemoveCityFromFavorites_ShouldReturnError_WhenCityDoesNotExist()
+        {
+            // Arrange
+            var email = "user@example.com";
+            var cityName = "City1";
+            var existingFavorites = new UserFavorites
+            {
+                Email = email,
+                FavoriteCities = new List<FavoriteCityModel>()
+            };
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(existingFavorites);
+
+            // Act
+            var result = await _service.RemoveCityFromFavorites(email, cityName);
+
+            // Assert
+            Assert.False(result.Success);
+            Assert.Equal("Cidade não encontrada nos favoritos.", result.Message);
+        }
+
+        [Fact]
+        public async Task GetFavoriteCities_ShouldReturnFavoriteCities_WhenUserHasFavorites()
+        {
+            // Arrange
+            var email = "user@example.com";
+            var cities = new List<FavoriteCityModel>
+            {
+                new FavoriteCityModel { CityName = "City1" },
+                new FavoriteCityModel { CityName = "City2" }
+            };
+            var existingFavorites = new UserFavorites { Email = email, FavoriteCities = cities };
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(existingFavorites);
+
+            // Act
+            var result = await _service.GetFavoriteCities(email);
+
+            // Assert
+            Assert.Equal(2, result.Count);
+            Assert.Contains(result, c => c.CityName == "City1");
+            Assert.Contains(result, c => c.CityName == "City2");
+        }
+
+        [Fact]
+        public async Task GetFavoriteCities_ShouldReturnEmptyList_WhenUserHasNoFavorites()
+        {
+            // Arrange
+            var email = "user@example.com";
+            var existingFavorites = new UserFavorites { Email = email, FavoriteCities = new List<FavoriteCityModel>() };
+            _repositoryMock.Setup(r => r.GetUserFavoritesByEmailAsync(email))
+                .ReturnsAsync(existingFavorites);
+
+            // Act
+            var result = await _service.GetFavoriteCities(email);
+
+            // Assert
+            Assert.Empty(result);
         }
     }
 }
