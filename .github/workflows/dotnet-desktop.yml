@@ -53,10 +53,10 @@ jobs:
     runs-on: windows-latest
 
     env:
-      Solution_Name: GloboClimaAPI.sln                         # Replace with your solution name.
-      Test_Project_Path: your-test-project-path                 # Replace with the path to your test project.
-      Wap_Project_Directory: GloboClimaAPI    # Replace with the Wap project directory relative to the solution.
-      Wap_Project_Path: GloboClimaAPI.csproj      # Replace with the path to your Wap project.
+      Solution_Name: GloboClimaAPI.sln                         # Nome da solução.
+      Test_Project_Path: your-test-project-path                 # Caminho para seu projeto de teste.
+      Wap_Project_Directory: GloboClimaAPI                      # Diretório do projeto WAP.
+      Wap_Project_Path: GloboClimaAPI.csproj                   # Caminho para seu projeto WAP.
 
     steps:
     - name: Checkout
@@ -64,44 +64,35 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET Core workload
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
-    # Add MSBuild to the PATH
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v2
 
-    # Execute all unit tests in the solution
     - name: Execute unit tests
       run: dotnet test
 
-    # Restore the application
     - name: Restore the application
       run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
 
-    # Create the app package by building the project
     - name: Build the application
       run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
 
-    # Listar os arquivos no diretório para verificação
     - name: List files in the WAP project directory
       run: |
         Get-ChildItem ${{ env.Wap_Project_Directory }}
         
-    # Criar o arquivo .zip do pacote
     - name: Create ZIP Package
       run: |
-        # Criar o arquivo zip usando o caminho correto
         powershell -Command "Compress-Archive -Path '${{ env.Wap_Project_Directory }}/*' -DestinationPath '${{ env.Wap_Project_Directory }}/GloboClimaAPI-package.zip'"
     
-    # Deploy para o AWS Lambda    
     - name: Deploy to AWS Lambda
       run: |
         aws lambda update-function-code --function-name GloboClimaApi --zip-file fileb://${{ env.Wap_Project_Directory }}/GloboClimaAPI-package.zip
