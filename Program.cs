@@ -9,6 +9,15 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Adicione a política CORS
+builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAllOrigins",
+                builder => builder.AllowAnyOrigin()
+                                  .AllowAnyHeader()
+                                  .AllowAnyMethod());
+        });
+
 // Adiciona os serviços necessários para o controlador
 builder.Services.AddControllers();
 
@@ -83,6 +92,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseCors("AllowAllOrigins");
+
 // Ativa o middleware para Swagger e Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
@@ -95,6 +106,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 }
 
 // Ativar autenticação e autorização
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
