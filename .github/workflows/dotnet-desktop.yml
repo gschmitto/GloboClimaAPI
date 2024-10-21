@@ -56,7 +56,7 @@ jobs:
       Solution_Name: GloboClimaAPI.sln                         # Replace with your solution name.
       Test_Project_Path: your-test-project-path                 # Replace with the path to your test project.
       Wap_Project_Directory: GloboClimaAPI    # Replace with the Wap project directory relative to the solution.
-      Wap_Project_Path: GloboClimaAPI/GloboClimaAPI.csproj      # Replace with the path to your Wap project.
+      Wap_Project_Path: GloboClimaAPI.csproj      # Replace with the path to your Wap project.
 
     steps:
     - name: Checkout
